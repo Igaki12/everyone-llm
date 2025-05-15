@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM学習記録アプリ</title>
+    <style>
+        :root {
+            --color-primary: #FF7E5F; /* 温かいオレンジ */
+            --color-secondary: #FEB47B; /* 温かいイエローオレンジ */
+            --color-accent: #FFDAB9; /* ピーチパフ - 明るいアクセント */
+            --color-text: #333333;
+            --color-text-light: #FFFFFF;
+            --color-bg-light: #FFF5E1; /* 温かいクリーム色 */
+            --font-family-main: 'Segoe UI', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+            --border-radius: 12px;
+            --shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family-main);
+            color: var(--color-text);
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden; /* ナビゲーションのアニメーション用 */
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 15px 0;
+            color: var(--color-text-light);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+        }
+
+        .account-info {
+            font-size: 0.9em;
+            margin-right: 20px;
+        }
+
+        .date-display-header {
+            font-size: 0.9em;
+        }
+
+        .hamburger-menu {
+            background: none;
+            border: none;
+            color: var(--color-text-light);
+            font-size: 1.8em;
+            cursor: pointer;
+            padding: 5px;
+            display: flex; /* For icon alignment */
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hamburger-menu svg {
+            width: 30px;
+            height: 30px;
+            fill: var(--color-text-light);
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 300px;
+            height: 100%;
+            background: linear-gradient(180deg, var(--color-secondary), var(--color-primary));
+            color: var(--color-text-light);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 1001; /* Headerより手前 */
+            overflow-y: auto;
+        }
+
+        nav.open {
+            transform: translateX(0);
+        }
+        
+        .nav-close-btn {
+            background: none;
+            border: none;
+            color: var(--color-text-light);
+            font-size: 1.5em;
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            cursor: pointer;
+        }
+
+        nav h3 {
+            margin-top: 25px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+            padding-bottom: 5px;
+            font-size: 1.1em;
+        }
+        
+        nav .nav-date-display {
+            font-size: 1em;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: rgba(255,255,255,0.1);
+            border-radius: var(--border-radius-sm, 8px); /* fallback */
+        }
+        
+        nav .total-inputs {
+             font-size: 0.9em;
+             margin-bottom: 15px;
+        }
+
+        nav ul {
+            list-style: none;
+        }
+
+        nav ul li {
+            margin-bottom: 10px;
+            font-size: 0.9em;
+            padding: 8px;
+            background-color: rgba(255,255,255,0.05);
+            border-radius: var(--border-radius-sm, 5px);
+            word-break: break-word;
+        }
+        
+        nav ul li:hover {
+            background-color: rgba(255,255,255,0.15);
+        }
+
+        /* Main Content */
+        main {
+            flex-grow: 1;
+            padding: 30px 0;
+            background-color: var(--color-bg-light);
+            border-radius: var(--border-radius) var(--border-radius) 0 0; /* 上部のみ角丸 */
+            margin-top: -20px; /* ヘッダーのグラデーションに少し被せる */
+            position: relative; /* z-indexのため */
+            z-index: 1;
+        }
+        
+        .input-section-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: calc(100vh - 250px); /* ヘッダーとフッターの高さを考慮 */
+            padding: 20px 0;
+        }
+
+        .input-area {
+            background-color: #FFFFFF;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 700px;
+            text-align: center;
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .input-area label {
+            display: block;
+            font-size: 1.3em;
+            color: var(--color-primary);
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .input-area textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            border: 2px solid var(--color-accent);
+            font-size: 1em;
+            font-family: var(--font-family-main);
+            resize: vertical;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .input-area textarea:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(255, 126, 95, 0.3); /* var(--color-primary) with alpha */
+        }
+
+        .input-area button {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            color: var(--color-text-light);
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .input-area button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        
+        .output-area {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: var(--border-radius);
+            border: 1px solid #eee;
+            min-height: 100px;
+            text-align: left;
+            color: var(--color-text);
+        }
+        .output-area p {
+            font-style: italic;
+            color: #777;
+        }
+
+
+        /* Footer */
+        footer {
+            background: var(--color-secondary); /* グラデーションの下側の色に合わせる */
+            color: var(--color-text-light);
+            text-align: center;
+            padding: 20px 0;
+            font-size: 0.9em;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                width: 95%;
+            }
+
+            .header-info {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .account-info {
+                margin-right: 0;
+                margin-bottom: 5px;
+            }
+            
+            nav {
+                width: 80%; /* モバイルではナビゲーションを少し広めに */
+                max-width: 280px;
+            }
+
+            .input-area {
+                padding: 20px;
+            }
+            .input-area label {
+                font-size: 1.1em;
+            }
+            .input-area textarea {
+                min-height: 120px;
+            }
+             .input-section-wrapper {
+                min-height: calc(100vh - 220px);
+            }
+        }
+        
+        /* Accessibility: Focus visibility for keyboard navigation */
+        .hamburger-menu:focus-visible, 
+        nav .nav-close-btn:focus-visible,
+        .input-area button:focus-visible {
+            outline: 2px solid var(--color-text-light);
+            outline-offset: 2px;
+        }
+        nav ul li a:focus-visible { /* Assuming links might be added */
+            outline: 1px solid var(--color-text-light);
+             outline-offset: 1px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container header-content">
+            <div class="header-info">
+                <div class="account-info">ようこそ、<span id="username">生徒</span>さん</div>
+                <div class="date-display-header" id="header-date"></div>
+            </div>
+            <button class="hamburger-menu" id="hamburger-btn" aria-label="ナビゲーションを開く" aria-expanded="false" aria-controls="nav-menu">
+                <svg viewBox="0 0 100 80" width="100%" height="100%">
+                  <rect width="100" height="15" rx="8"></rect>
+                  <rect y="30" width="100" height="15" rx="8"></rect>
+                  <rect y="60" width="100" height="15" rx="8"></rect>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <nav id="nav-menu" aria-hidden="true">
+        <button class="nav-close-btn" id="nav-close-btn" aria-label="ナビゲーションを閉じる">×</button>
+        <div class="nav-date-display" id="nav-date"></div>
+        
+        <div class="total-inputs">
+            今日の総入力数: <span id="total-inputs-count">123</span>件
+        </div>
+
+        <h3>みんなのプロンプト</h3>
+        <ul id="recent-prompts-list">
+            <li>AIで宿題を手伝ってほしい</li>
+            <li>面白い物語を考えて</li>
+            <li>未来の学校はどうなる？</li>
+            <li>今日の給食は何かな？</li>
+        </ul>
+
+        <h3>あなたの入力履歴</h3>
+        <ul id="user-history-list">
+            <li>昨日の質問：太陽系の惑星について</li>
+            <li>3日前の質問：プログラミングのコツ</li>
+            <li>1週間前の質問：恐竜が生きていた時代</li>
+        </ul>
+    </nav>
+
+    <main>
+        <div class="container">
+            <div class="input-section-wrapper">
+                <section class="input-area" aria-labelledby="input-label">
+                    <label id="input-label" for="prompt-input">LLMに質問やお願いごとを入力してみよう！</label>
+                    <textarea id="prompt-input" placeholder="例: 明日の天気について教えてください"></textarea>
+                    <button id="submit-button">送信する</button>
+                    
+                    <div class="output-area">
+                        <p>ここにLLMからの応答が表示されます。</p>
+                        <!-- 例: <p><strong>AIからの返信:</strong> 明日の天気は晴れのち曇りでしょう。</p> -->
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>© 2025 Happyman. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Date display
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth() + 1;
+            const day = today.getDate();
+            const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][today.getDay()];
+            const formattedDate = `${year}年${month}月${day}日 (${dayOfWeek})`;
+
+            document.getElementById('header-date').textContent = formattedDate;
+            document.getElementById('nav-date').textContent = `今日の日付: ${formattedDate}`;
+
+            // Hamburger menu functionality
+            const hamburgerBtn = document.getElementById('hamburger-btn');
+            const navMenu = document.getElementById('nav-menu');
+            const navCloseBtn = document.getElementById('nav-close-btn');
+
+            const toggleNav = () => {
+                const isOpen = navMenu.classList.toggle('open');
+                hamburgerBtn.setAttribute('aria-expanded', isOpen.toString());
+                navMenu.setAttribute('aria-hidden', (!isOpen).toString());
+                if (isOpen) {
+                    document.body.style.overflow = 'hidden'; // Prevent background scroll
+                    navCloseBtn.focus(); // Focus on close button when nav opens
+                } else {
+                    document.body.style.overflow = '';
+                    hamburgerBtn.focus(); // Return focus to hamburger button
+                }
+            };
+            
+            hamburgerBtn.addEventListener('click', toggleNav);
+            navCloseBtn.addEventListener('click', toggleNav);
+
+            // Close nav when clicking outside of it (optional)
+            document.addEventListener('click', (event) => {
+                if (navMenu.classList.contains('open') && 
+                    !navMenu.contains(event.target) && 
+                    !hamburgerBtn.contains(event.target)) {
+                    toggleNav();
+                }
+            });
+            
+            // Close nav on Escape key press
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && navMenu.classList.contains('open')) {
+                    toggleNav();
+                }
+            });
+
+
+            // --- Placeholder data (can be replaced with actual data fetching) ---
+            // Username (can be dynamic)
+            // document.getElementById('username').textContent = "〇〇"; 
+            
+            // Total inputs count (can be dynamic)
+            // document.getElementById('total-inputs-count').textContent = "150"; 
+
+            // Recent prompts (can be dynamic)
+            /*
+            const recentPrompts = [
+                "Pythonで簡単なゲームを作る方法は？",
+                "地球温暖化の原因と対策",
+                "おすすめのSF小説を教えて"
+            ];
+            const recentPromptsList = document.getElementById('recent-prompts-list');
+            recentPromptsList.innerHTML = recentPrompts.map(prompt => `<li>${prompt}</li>`).join('');
+            */
+
+            // User history (can be dynamic)
+            /*
+            const userHistory = [
+                "以前の質問: 「AIとは何か」",
+                "2日前の質問: 「関数の使い方」"
+            ];
+            const userHistoryList = document.getElementById('user-history-list');
+            userHistoryList.innerHTML = userHistory.map(item => `<li>${item}</li>`).join('');
+            */
+            
+            // Submit button functionality (placeholder)
+            const submitButton = document.getElementById('submit-button');
+            const promptInput = document.getElementById('prompt-input');
+            const outputArea = document.querySelector('.output-area');
+
+            submitButton.addEventListener('click', () => {
+                const inputText = promptInput.value.trim();
+                if (inputText) {
+                    // Simulate LLM response
+                    outputArea.innerHTML = `<p><strong>あなたの入力:</strong> ${inputText}</p>
+                                            <p><strong>AIからの返信 (サンプル):</strong> 「${inputText}」についてですね。興味深い質問です！もう少し詳しく調べてお答えしますね。</p>`;
+                    promptInput.value = ''; // Clear input after submission
+                } else {
+                    outputArea.innerHTML = `<p style="color: red;">何か入力してください。</p>`;
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
